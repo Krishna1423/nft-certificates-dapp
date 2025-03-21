@@ -43,9 +43,6 @@ jobs:
             kubectl wait --for=condition=Ready nodes --timeout=120s
 
             echo "🚀 Deploying Kubernetes manifests..."
-            kubectl apply -f ~/kubernetes/deployment.yaml
-            kubectl apply -f ~/kubernetes/service.yaml
-            kubectl apply -f ~/kubernetes/rbac.yaml
+            kubectl apply -f ~/kubernetes/application.yaml
 
             echo "✅ Deployment completed successfully!"
-
