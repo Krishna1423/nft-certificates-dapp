@@ -1,9 +1,15 @@
 #!/bin/bash
 set -e  # Exit immediately if a command fails
 
-# Update and install required packages (Amazon Linux uses yum/dnf, not apt)
+# Update and install required packages 
 sudo yum update -y
-sudo yum install -y curl tar unzip ca-certificates
+sudo yum install -y tar unzip ca-certificates
+
+# Fix curl conflict (remove curl-minimal if present, then install curl)
+if yum list installed | grep -q 'curl-minimal'; then
+    sudo yum remove -y curl-minimal
+fi
+sudo yum install -y curl
 
 # Install Docker
 sudo yum install -y docker
