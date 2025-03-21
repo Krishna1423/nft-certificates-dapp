@@ -37,7 +37,7 @@ resource "aws_security_group" "k8s_sg" {
 }
 
 # Create an EC2 instance
-resource "aws_instance" "k8s_node" {
+resource "aws_instance" "project_instance" {
   ami                    = var.ami_id
   instance_type          = var.instance_type
   key_name               = var.key_name

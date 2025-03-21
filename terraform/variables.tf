@@ -1,6 +1,6 @@
 variable "aws_region" {
   description = "AWS region"
-  default     = "us-east-1"
+  default     = "us-east-2"
 }
 
 variable "instance_type" {
@@ -10,10 +10,10 @@ variable "instance_type" {
 
 variable "ami_id" {
   description = "Amazon Machine Image (AMI) ID for Ubuntu"
-  default     = "ami-0c55b159cbfafe1f0" # Update with your region-specific Ubuntu AMI
+  default     = "ami-0d0f28110d16ee7d6" # Update with your region-specific Ubuntu AMI
 }
 
 variable "key_name" {
   description = "Name of the SSH key pair"
-  default     = "my-aws-key"
+  default     = "VM1"
 }
