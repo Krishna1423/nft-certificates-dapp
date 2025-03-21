@@ -134,7 +134,7 @@ const NFTCertificate = () => {
 
     try {
       const ganacheProvider = new Web3.providers.HttpProvider(
-        "http://ganache-service:8545"
+        "http://localhost:8545"
       );
 
       //  Initialize Web3 with Ganache provider

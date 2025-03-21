@@ -15,12 +15,9 @@ spec:
       containers:
         - name: nft-app
           image: project-app:latest
-          imagePullPolicy: Never # REMOVE THIS DA PUNDAMAVANE-------------
+          # imagePullPolicy: Never
           ports:
             - containerPort: 3000
-          env:
-            - name: GANACHE_RPC_URL
-              value: "http://ganache:8545" # Connects to the Ganache service
           resources:
             limits:
               cpu: "500m"

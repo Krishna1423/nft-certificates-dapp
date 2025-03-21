@@ -10,7 +10,7 @@ RUN cd nft-certificates && npm install && npm install -g truffle
 # Copy backend source code
 COPY nft-certificates ./nft-certificates/
 
-# Compile smart contracts (but don't migrate, since Ganache isn't available at build time)
+# Compile smart contracts 
 RUN cd nft-certificates && truffle compile
 
 # --------------------------------------------------------------------------------------------
