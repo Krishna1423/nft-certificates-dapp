@@ -14,8 +14,8 @@ spec:
     spec:
       containers:
         - name: nft-app
-          image: project-app:latest
-          # imagePullPolicy: Never
+          image: public.ecr.aws/q2x5y1y2/krishna1423:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 3000
           resources:

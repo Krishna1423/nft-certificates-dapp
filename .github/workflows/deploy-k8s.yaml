@@ -1,0 +1,40 @@
+jobs:
+  deploy:
+    name: Deploy to Kubernetes on EC2
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Copy Kubernetes Manifests to EC2
+        run: |
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > private_key.pem
+          chmod 600 private_key.pem
+          scp -i private_key.pem -o StrictHostKeyChecking=no -r kubernetes/ ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ubuntu/myapp/k8s
+          rm -f private_key.pem
+
+      - name: Connect to EC2 and Deploy Kubernetes
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            echo "🔍 Checking if kind cluster is running..."
+            if ! kind get clusters | grep -q 'kind'; then
+              echo "⚡ Starting kind cluster..."
+              kind create cluster
+            else
+              echo "✅ Kind cluster is already running."
+            fi
+
+            echo "⏳ Waiting for node to be ready..."
+            kubectl wait --for=condition=Ready nodes --timeout=120s
+
+            echo "🚀 Deploying Kubernetes manifests..."
+            kubectl apply -f /home/ubuntu/myapp/k8s/deployment.yaml
+            kubectl apply -f /home/ubuntu/myapp/k8s/service.yaml
+            kubectl apply -f /home/ubuntu/myapp/k8s/rbac.yaml
+
+            echo "✅ Deployment completed successfully!"
