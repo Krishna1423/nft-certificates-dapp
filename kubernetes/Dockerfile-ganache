@@ -1,0 +1,5 @@
+FROM trufflesuite/ganache-cli
+
+EXPOSE 8545
+
+CMD ["ganache-cli", "-h", "0.0.0.0", "--gasLimit", "60000000", "--blockTime", "2"]

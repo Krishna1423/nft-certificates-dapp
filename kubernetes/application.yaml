@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nft-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nft-app
+  template:
+    metadata:
+      labels:
+        app: nft-app
+    spec:
+      containers:
+        - name: nft-app
+          image: project-app:latest
+          imagePullPolicy: Never # REMOVE THIS DA PUNDAMAVANE-------------
+          ports:
+            - containerPort: 3000
+          env:
+            - name: GANACHE_RPC_URL
+              value: "http://ganache:8545" # Connects to the Ganache service
+          resources:
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nft-app-service
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 80
+      targetPort: 3000
+  selector:
+    app: nft-app

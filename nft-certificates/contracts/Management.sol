@@ -28,7 +28,8 @@ contract Management {
         Certificate cert = new Certificate(_name, _symbol, _field_names, msg.sender); // returns bytecode
         
         // Not storing bytecode, as it will become expensive
-        address certAddress = cert.contractAddress();
+        //address certAddress = cert.contractAddress();
+        address certAddress = address(cert);
 
         NftInfo storage nftInfo = nftadmins[msg.sender];
         nftInfo.addresses.push(certAddress);

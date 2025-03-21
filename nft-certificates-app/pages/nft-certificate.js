@@ -1,11 +1,10 @@
 import Head from "next/head";
 import { useState, useEffect } from "react";
 import Web3 from "web3";
+import { pinata } from "../utils/config.js";
 import identityContract from "../blockchain/certificate";
-import detectEthereumProvider from "@metamask/detect-provider";
 import "bulma/css/bulma.css";
 import styles from "../styles/NftCertificate.module.css";
-import { create } from "ipfs-http-client";
 
 const NFTCertificate = () => {
   const [connectWalletError, setConnectWalletError] = useState("");
@@ -18,7 +17,7 @@ const NFTCertificate = () => {
   const [myContract, setMyContract] = useState(null);
   const [nftFile, updateNftFile] = useState(null);
 
-  const client = create("https://ipfs.infura.io:5001/api/v0");
+  //const client = create("https://aquamarine-above-viper-774.mypinata.cloud/ipfs");
 
   useEffect(() => {
     if (myContract && address) getNftContracts();
@@ -59,12 +58,17 @@ const NFTCertificate = () => {
 
   const getNftContracts = async () => {
     updateText("NftContractsMessage", "danger");
-    if (web3 == "undefined") await connectWalletHandler();
+    if (web3 == "undefined") await connectGanacheHandler();
 
     try {
+      const gasEstimate = await myContract.methods
+        .get_nft_addresses()
+        .estimateGas({ from: address });
+      console.log("Estimated Gas:", gasEstimate);
+
       const nftAdresses = await myContract.methods
         .get_nft_addresses()
-        .call({ from: address });
+        .call({ from: address, gas: gasEstimate + 50000 });
       console.log(nftAdresses);
       const resLength = Object.keys(nftAdresses).length;
 
@@ -88,39 +92,82 @@ const NFTCertificate = () => {
     }
   };
 
-  const connectWalletHandler = async () => {
-    /* Check if metamask is installed */
-    const provider = await detectEthereumProvider();
+  // const connectWalletHandler = async () => {
+  //   /* Check if metamask is installed */
+  //   const provider = await detectEthereumProvider();
+  //   console.log("Entering handler");
+  //   if (provider) {
+  //     try {
+  //       // It is metamask ethereum provider API
+  //       /* Requesting wallet connect */
+  //       await provider.request({ method: "eth_requestAccounts" });
+  //       web3 = new Web3(provider);
+  //       setWeb3(web3);
+  //       console.log("Conection successful");
+  //       setConnectWalletError("");
+  //       /* Get accounts List */
+  //       const accounts = await web3.eth.getAccounts();
+  //       console.log(accounts[0]);
+  //       setAddress(accounts[0]);
+
+  //       /* Create local vm copy */
+  //       const vm = identityContract(web3);
+  //       setMyContract(vm);
+  //       setConnectWalletError("");
+
+  //       let button = document.getElementById("connectButton");
+  //       button.style.display = "none";
+
+  //       let adr = document.getElementById("connectAddress");
+  //       adr.style.display = "block";
+  //     } catch (error) {
+  //       setConnectWalletError(error.message);
+  //     }
+  //   } else {
+  //     // Metamask not installed
+  //     setConnectWalletError("Please install Metamask");
+  //   }
+  // };
+
+  const connectGanacheHandler = async () => {
     console.log("Entering handler");
-    if (provider) {
-      try {
-        // It is metamask ethereum provider API
-        /* Requesting wallet connect */
-        await provider.request({ method: "eth_requestAccounts" });
-        web3 = new Web3(provider);
-        setWeb3(web3);
-        console.log("Conection successful");
-        setConnectWalletError("");
-        /* Get accounts List */
-        const accounts = await web3.eth.getAccounts();
-        setAddress(accounts[0]);
 
-        /* Create local vm copy */
-        const vm = identityContract(web3);
-        setMyContract(vm);
-        setConnectWalletError("");
+    try {
+      const ganacheProvider = new Web3.providers.HttpProvider(
+        "http://ganache-service:8545"
+      );
 
-        let button = document.getElementById("connectButton");
-        button.style.display = "none";
+      //  Initialize Web3 with Ganache provider
+      const web3 = new Web3(ganacheProvider);
+      setWeb3(web3);
+      console.log("Connected to Ganache");
 
-        let adr = document.getElementById("connectAddress");
-        adr.style.display = "block";
-      } catch (error) {
-        setConnectWalletError(error.message);
+      /*  Get accounts from Ganache */
+      const accounts = await web3.eth.getAccounts();
+
+      if (accounts.length === 0) {
+        throw new Error("No accounts found. Make sure Ganache is running.");
       }
-    } else {
-      // Metamask not installed
-      setConnectWalletError("Please install Metamask");
+
+      console.log("Ganache Accounts:", accounts);
+      setAddress(accounts[0]); // Use the first Ganache account
+
+      /*  Create contract instance using Ganache Web3 */
+      const vm = identityContract(web3); // Make sure this function is correctly importing your contract
+      setMyContract(vm);
+
+      // /* ✅ Hide Connect Button */
+      // let button = document.getElementById("connectButton");
+      // if (button) button.style.display = "none";
+
+      let adr = document.getElementById("connectAddress");
+      if (adr) adr.style.display = "block";
+
+      // Clear error message
+      setConnectWalletError("");
+    } catch (error) {
+      console.error("Error connecting to Ganache:", error);
+      setConnectWalletError(error.message);
     }
   };
 
@@ -128,7 +175,7 @@ const NFTCertificate = () => {
     updateText("IssueNftMessage", "info", "");
     updateText("CreateNftMessage", "info", "Please wait...");
 
-    if (web3 == "undefined") await connectWalletHandler();
+    if (web3 == "undefined") await connectGanacheHandler();
     const inputs = document.querySelectorAll("#createNftform input");
 
     let tokenName, tokenSymbol, attributeNames;
@@ -142,11 +189,17 @@ const NFTCertificate = () => {
     console.log(attributeNames);
     console.log(tokenName, tokenSymbol, attributeNames);
     try {
+      const gasEstimate = await myContract.methods
+        .create_nft(tokenName, tokenSymbol, attributeNames)
+        .estimateGas({ from: address });
+      console.log("Estimated Gas:", gasEstimate);
+
       const result = await myContract.methods
         .create_nft(tokenName, tokenSymbol, attributeNames)
-        .send({ from: address, gasLimit: 25000000 });
+        .send({ from: address, gas: gasEstimate + 50000 });
       console.log(result);
-      console.log(result.events);
+      console.log("Available events: " + Object.keys(result.events));
+      console.log("Logs: " + result.logs);
       const tokenAddress =
         result.events["NftCreated"].returnValues["tokenAddress"];
       console.log(tokenAddress);
@@ -168,7 +221,7 @@ const NFTCertificate = () => {
   const issueNftHandler = async () => {
     updateText("CreateNftMessage", "info", "");
     updateText("IssueNftMessage", "info", "Please wait...");
-    if (web3 == "undefined") await connectWalletHandler();
+    if (web3 == "undefined") await connectGanacheHandler();
 
     const inputs = document.querySelectorAll("#issueNftForm input");
 
@@ -188,21 +241,31 @@ const NFTCertificate = () => {
       updateText("IssueNftMessage", "danger", "Please upload NFT file");
       return;
     }
-    let url = ''
+    //let url = "";
     try {
-      const added = await client.add(nftFile);
-      url = `https://ipfs.infura.io/ipfs/${added.path}`;
+      //const added = await client.add(nftFile);
+      //url = `https://ipfs.infura.io/ipfs/${added.path}`;
+      // const uploadRequest = await fetch("/api/files", {
+      //   method: "POST",
+      //   body: nftFile,
+      // });
+      // const signedUrl = await uploadRequest.json();
+
+      const { cid } = await pinata.upload.public.file(nftFile);
+      const signedUrl = await pinata.gateways.public.convert(cid);
+      console.log("Image uploaded to pinata");
+
       updateText(
         "IssueNftMessage",
         "success",
-        "Keep waiting! NFT image URI: " + url
+        "Keep waiting! NFT image URI: " + signedUrl
       );
     } catch (error) {
       updateText("IssueNftMessage", "danger", error.message);
-      return
+      return;
     }
 
-    json["image"] = url;
+    json["image"] = signedUrl;
 
     let attributes = [];
     let attrs = document.querySelectorAll("#attributes input");
@@ -219,7 +282,8 @@ const NFTCertificate = () => {
     let tokenURI;
     try {
       const added = await client.add(JSON.stringify(json));
-      tokenURI = "https://ipfs.infura.io/ipfs/" + added.path;
+      tokenURI =
+        "https://aquamarine-above-viper-774.mypinata.cloud/ipfs/" + added.path;
       updateText(
         "IssueNftMessage",
         "success",
@@ -231,9 +295,14 @@ const NFTCertificate = () => {
     }
 
     try {
+      const gasEstimate = await myContract.methods
+        .issue_certificate(receiverAddress, nftContract, tokenURI)
+        .estimateGas({ from: address });
+      console.log("Estimated Gas:", gasEstimate);
+
       const result = await myContract.methods
         .issue_certificate(receiverAddress, nftContract, tokenURI)
-        .send({ from: address, gasLimit: 25000000 });
+        .send({ from: address, gasLimit: gasEstimate + 50000 });
       // console.log(result)
       // console.log(result.events)
       const tokenAddress =
@@ -260,7 +329,7 @@ const NFTCertificate = () => {
   };
 
   const getNftAttributes = async (contractAddress) => {
-    if (web3 == "undefined") await connectWalletHandler();
+    if (web3 == "undefined") await connectGanacheHandler();
     try {
       const result = await myContract.methods
         .get_nft_attributes(contractAddress)
@@ -313,8 +382,8 @@ const NFTCertificate = () => {
   async function updateImage(e) {
     const file = e.target.files[0];
     updateNftFile(file);
-    document.getElementsByClassName('file-name')[0].innerHTML = file.name
-    console.log(file.name)
+    document.getElementsByClassName("file-name")[0].innerHTML = file.name;
+    console.log(file.name);
   }
 
   const issueThisNft = async (event) => {
@@ -333,9 +402,10 @@ const NFTCertificate = () => {
     /* Move to mint section by simulating the click */
     document.querySelectorAll(".tabs li")[1].click();
 
-    let contractAddress = event.target.getAttribute("contractAddress");
-    let name = event.target.getAttribute("name");
-    let symbol = event.target.getAttribute("symbol");
+    let contractAddress = event.target.dataset.contractAddress;
+    let name = event.target.dataset.name;
+    let symbol = event.target.dataset.symbol;
+
     console.log("Here ", contractAddress, name, symbol);
 
     var newdiv = document.createElement("div");
@@ -374,7 +444,7 @@ const NFTCertificate = () => {
           rel="stylesheet"
           href="https://use.fontawesome.com/releases/v5.7.2/css/all.css"
           integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr"
-          crossorigin="anonymous"
+          crossOrigin="anonymous"
         />
       </Head>
       <nav className="navbar mt-4 mb-4">
@@ -384,11 +454,11 @@ const NFTCertificate = () => {
           </div>
           <div className="navbar-end">
             <button
-              onClick={connectWalletHandler}
+              onClick={connectGanacheHandler}
               id="connectButton"
               className="button is-primary"
             >
-              Connect Wallet
+              Connect Ganache
             </button>
             <div
               id="connectAddress"
@@ -409,9 +479,9 @@ const NFTCertificate = () => {
         </div>
       </section>
 
-      <div class="tabs is-boxed is-centered is-medium">
+      <div className="tabs is-boxed is-centered is-medium">
         <ul>
-          <li class="is-active" data-target="contracts-section">
+          <li className="is-active" data-target="contracts-section">
             <a>NFT Contracts</a>
           </li>
         </ul>
@@ -449,6 +519,7 @@ const NFTCertificate = () => {
                         <a
                           href={"https://rinkeby.etherscan.io/token/" + nft[0]}
                           target="_blank"
+                          rel="noreferrer"
                         >
                           etherscan
                         </a>
@@ -457,9 +528,9 @@ const NFTCertificate = () => {
                       <td>
                         <button
                           onClick={issueThisNft}
-                          contractAddress={nft[0]}
-                          name={nft[1]}
-                          symbol={nft[2]}
+                          data-contract-address={nft[0]}
+                          data-name={nft[1]}
+                          data-symbol={nft[2]}
                         >
                           Issue
                         </button>
@@ -485,9 +556,9 @@ const NFTCertificate = () => {
           style={{ display: "none" }}
         >
           <div className="container" id="issueNftForm">
-            <p class="title">Mint NFT</p>
-            <div class="columns">
-              <div class="column is-one-third">
+            <p className="title">Mint NFT</p>
+            <div className="columns">
+              <div className="column is-one-third">
                 <div className="field">
                   <div className="control">
                     <input
@@ -499,7 +570,7 @@ const NFTCertificate = () => {
                   </div>
                 </div>
               </div>
-              <div class="column is-one-third">
+              <div className="column is-one-third">
                 <div className="field">
                   <div className="control">
                     <input
@@ -511,7 +582,7 @@ const NFTCertificate = () => {
                   </div>
                 </div>
               </div>
-              <div class="column is-one-third">
+              <div className="column is-one-third">
                 <div className="field">
                   <div className="control">
                     <input
@@ -525,8 +596,8 @@ const NFTCertificate = () => {
               </div>
             </div>
 
-            <div class="columns">
-              <div class="column is-one-third">
+            <div className="columns">
+              <div className="column is-one-third">
                 <label className="label">Receiver Address</label>
                 <div className="field">
                   <div className="control has-icons-left">
@@ -537,12 +608,12 @@ const NFTCertificate = () => {
                       placeholder="Enter receiver address"
                     ></input>
                     <span className="icon is-small is-left">
-                      <i class="fas fa-address-card"></i>
+                      <i className="fas fa-address-card"></i>
                     </span>
                   </div>
                 </div>
               </div>
-              <div class="column is-one-third">
+              <div className="column is-one-third">
                 <label className="label">Name</label>
                 <div className="field">
                   <div className="control has-icons-left">
@@ -553,12 +624,12 @@ const NFTCertificate = () => {
                       placeholder="Enter NFT name"
                     ></input>
                     <span className="icon is-small is-left">
-                      <i class="fas fa-keyboard"></i>
+                      <i className="fas fa-keyboard"></i>
                     </span>
                   </div>
                 </div>
               </div>
-              <div class="column is-one-third">
+              <div className="column is-one-third">
                 <label className="label">Description</label>
                 <div className="field">
                   <div className="control has-icons-left">
@@ -569,28 +640,28 @@ const NFTCertificate = () => {
                       placeholder="Enter NFT description"
                     ></input>
                     <span className="icon is-small is-left">
-                      <i class="fas fa-keyboard"></i>
+                      <i className="fas fa-keyboard"></i>
                     </span>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div id="file-js-example" class="file has-name mt-4">
-              <label class="file-label">
+            <div id="file-js-example" className="file has-name mt-4">
+              <label className="file-label">
                 <input
-                  class="file-input"
+                  className="file-input"
                   type="file"
                   name="nftFile"
                   onChange={updateImage}
                 />
-                <span class="file-cta">
-                  <span class="file-icon">
-                    <i class="fas fa-upload"></i>
+                <span className="file-cta">
+                  <span className="file-icon">
+                    <i className="fas fa-upload"></i>
                   </span>
-                  <span class="file-label">Choose your NFT</span>
+                  <span className="file-label">Choose your NFT</span>
                 </span>
-                <span class="file-name">File Name</span>
+                <span className="file-name">File Name</span>
               </label>
             </div>
           </div>
@@ -607,9 +678,9 @@ const NFTCertificate = () => {
           </div>
         </section>
 
-        <section id="create-nft-section" class="is-hidden">
+        <section id="create-nft-section" className="is-hidden">
           <div className="container" id="createNftform">
-            <p class="title">Create NFT contract</p>
+            <p className="title">Create NFT contract</p>
             <div className="field">
               <div className="control has-icons-left">
                 <input
@@ -619,7 +690,7 @@ const NFTCertificate = () => {
                   placeholder="Enter Token Name"
                 ></input>
                 <span className="icon is-small is-left">
-                  <i class="fas fa-user"></i>
+                  <i className="fas fa-user"></i>
                 </span>
               </div>
             </div>
@@ -632,7 +703,7 @@ const NFTCertificate = () => {
                   placeholder="Enter Token Symbol"
                 ></input>
                 <span className="icon is-small is-left">
-                  <i class="fas fa-heart"></i>
+                  <i className="fas fa-heart"></i>
                 </span>
               </div>
             </div>
@@ -645,7 +716,7 @@ const NFTCertificate = () => {
                   placeholder="Enter Attribute Names"
                 ></input>
                 <span className="icon is-small is-left">
-                  <i class="fas fa-tags"></i>
+                  <i className="fas fa-tags"></i>
                 </span>
               </div>
             </div>
