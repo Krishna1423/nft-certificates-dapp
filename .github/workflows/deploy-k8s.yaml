@@ -31,16 +31,8 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            echo "🔍 Checking if kind cluster is running..."
-            if ! kind get clusters | grep -q 'kind'; then
-              echo "⚡ Starting kind cluster..."
-              kind create cluster
-            else
-              echo "✅ Kind cluster is already running."
-            fi
-
             echo "⏳ Waiting for node to be ready..."
-            kubectl wait --for=condition=Ready nodes --timeout=120s
+            kubectl wait --for=condition=Ready nodes --timeout=60s
 
             echo "🚀 Deploying Kubernetes manifests..."
             kubectl apply -f ~/kubernetes/application.yaml
