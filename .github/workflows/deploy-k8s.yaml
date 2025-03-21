@@ -37,4 +37,11 @@ jobs:
             echo "🚀 Deploying Kubernetes manifests..."
             kubectl apply -f ~/kubernetes/application.yaml
 
+            kubectl apply -f ~/kubernetes/admin-sa.yaml
+            kubectl apply -f ~/kubernetes/user-sa.yaml
+            kubectl apply -f ~/kubernetes/admin-role.yaml
+            kubectl apply -f ~/kubernetes/user-role.yaml
+            kubectl apply -f ~/kubernetes/admin-rolebinding.yaml
+            kubectl apply -f ~/kubernetes/user-rolebinding.yaml
+
             echo "✅ Deployment completed successfully!"
