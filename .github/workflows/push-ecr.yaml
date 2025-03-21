@@ -32,8 +32,7 @@ jobs:
 
       - name: Build and Tag Docker Image
         run: |
-          cd docker/
-          docker build --no-cache -t ${{ secrets.ECR_REPOSITORY }}:latest .
+          docker build --no-cache -f docker/Dockerfile -t ${{ secrets.ECR_REPOSITORY }}:latest .
           docker tag ${{ secrets.ECR_REPOSITORY }}:latest ${{ secrets.ECR_REGISTRY_URI }}/${{ secrets.ECR_REPOSITORY }}:latest
 
       - name: Push Image to Public ECR
