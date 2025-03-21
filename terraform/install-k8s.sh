@@ -1,38 +1,34 @@
 #!/bin/bash
 set -e  # Exit immediately if a command fails
 
-# Update and install required packages 
-sudo yum update -y
-sudo yum install -y tar unzip ca-certificates
+# Update package repository
+sudo dnf update -y
 
-# Fix curl conflict (remove curl-minimal if present, then install curl)
-if yum list installed | grep -q 'curl-minimal'; then
-    sudo yum remove -y curl-minimal
-fi
-sudo yum install -y curl
+# Install required utilities
+sudo dnf install -y tar unzip ca-certificates curl git
 
 # Install Docker
-sudo yum install -y docker
-sudo systemctl enable docker
-sudo systemctl start docker
+sudo dnf install -y docker
+sudo systemctl enable --now docker  # Enables and starts Docker
+sudo usermod -aG docker ec2-user    # Add ec2-user to Docker group to allow running Docker without sudo
 
-# Install kubectl (Use Amazon Linux-compatible URL)
-sudo curl -LO "https://dl.k8s.io/release/$(curl -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-sudo chmod +x ./kubectl
-sudo mv ./kubectl /usr/local/bin/kubectl
+# Install kubectl (Amazon Linux 2023)
+curl -LO "https://dl.k8s.io/release/$(curl -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+chmod +x kubectl
+sudo mv kubectl /usr/local/bin/kubectl
 
-# Install kind
-sudo curl -Lo kind https://kind.sigs.k8s.io/dl/latest/kind-linux-amd64
-sudo chmod +x kind
+# Install Kind
+curl -Lo kind https://kind.sigs.k8s.io/dl/latest/kind-linux-amd64
+chmod +x kind
 sudo mv kind /usr/local/bin/kind
 
-# Create kind cluster
-sudo /usr/local/bin/kind create cluster
+# Ensure Docker service is running (needed for Kind)
+sudo systemctl restart docker
 
-# Add user to Docker group (Amazon Linux uses 'ec2-user' instead of 'ubuntu')
-sudo usermod -aG docker ec2-user
+# Create a Kind cluster
+kind create cluster
 
-# Output versions
+# Output installed versions
 docker --version
 kubectl version --client
 kind version
