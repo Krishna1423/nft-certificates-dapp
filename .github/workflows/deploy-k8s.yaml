@@ -19,7 +19,9 @@ jobs:
         run: |
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > private_key.pem
           chmod 600 private_key.pem
-          scp -i private_key.pem -o StrictHostKeyChecking=no -r kubernetes/ ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ubuntu/myapp/k8s
+
+          # Copy the Kubernetes manifests to the EC2 instance's home directory
+          scp -i private_key.pem -o StrictHostKeyChecking=no -r kubernetes/ ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:~/
           rm -f private_key.pem
 
       - name: Connect to EC2 and Deploy Kubernetes
@@ -41,6 +43,9 @@ jobs:
             kubectl wait --for=condition=Ready nodes --timeout=120s
 
             echo "🚀 Deploying Kubernetes manifests..."
-            kubectl apply -f /home/ubuntu/myapp/k8s/application.yaml
+            kubectl apply -f ~/kubernetes/deployment.yaml
+            kubectl apply -f ~/kubernetes/service.yaml
+            kubectl apply -f ~/kubernetes/rbac.yaml
 
             echo "✅ Deployment completed successfully!"
+
